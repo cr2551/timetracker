@@ -21,13 +21,13 @@ start_stopwatch() {
     while true; do
         sleep 1
         # this is preferable to expr since it avoids fork/execute for the expr command
-        seconds=$(( $seconds + 1 ))
+        seconds=$(( seconds + 1 ))
         if [ "$seconds" = 60 ]; then
-            minutes=$(( $minutes + 1 ))
+            minutes=$(( minutes + 1 ))
             seconds=0
         fi
         if [ "$minutes" = 60 ]; then
-            hours=$(( $hours + 1 ))
+            hours=$(( hours + 1 ))
             minutes=0
         fi
     # write to a file that we will read from
@@ -40,12 +40,12 @@ start_stopwatch() {
 show_time() {
     arr=($( cat "$PROJECTSDIR"/"$project" ))
     total=0
-    for i in ${arr[@]}; do
-        let total+=$i
+    for i in "${arr[@]}"; do
+        (( total+=i ))
     done
-    hours="$(( $total / 3600 ))"
-    mins="$(( ($total / 60) - ($hours * 60) ))"
-    secs="$(( ($total) - (($total / 60) * 60 ) ))"
+    hours="$(( total / 3600 ))"
+    mins="$(( (total / 60) - (hours * 60) ))"
+    secs="$(( (total) - ((total / 60) * 60 ) ))"
     echo "Total time recorded for project $project: "
     echo  -e "$hours hours $mins mins $secs seconds \n"
 }
@@ -75,9 +75,8 @@ start_sess() {
     # in this file
     date +%s >> "$PROGDIR"/session-"$project"
 
-    echo "Started session for $project"
     echo -e "\n Tracking time spent on:  $project"
-    echo -e " Started at            " $(date "+%H:%M %p") "\n"
+    echo -e " Started at            \"$(date "+%H:%M %p")\"\n"
 }
 
 
@@ -143,28 +142,16 @@ elif [[ "$1" == "-c" ]]; then
         exit
     fi
 
-#remove last session
-elif [[ "$1" == "-r" ]]; then
-    session=$(find "$PROGDIR"/ -regex ".*session.*")
-# if there are more than 2 files that match the regex, then the next check will fail
-    if [[ -f "$session" ]]; then
-        rm $session
-        echo "-c $project" >> "$PROGDIR"/.last
-        echo "session  $project  closed"
-        show_time
-        exit
-    else
-        echo -e "Failed to close session. Session needs to be started first \n "
-        exit
-    fi
 
 #delete last saved session needs more work
 elif [[ "$1" == "-d" ]]; then
-    project=$PROJECTSDIR/$2
-    head -n-1 "$project" > "$PROGDIR"/tmp
-    cat "$PROGDIR"/tmp > "$project"
+    LastLine=$(tail -n 1 "$PROGDIR"/.last)
+            # use awk to get all but the first field 
+    project_name=$( echo "$LastLine" | awk '{for (i=2; i<=NF; i++) {printf "%s", $i; if(i<NF) printf " "}; printf ""}' )
+    project_path=$PROJECTSDIR/$project_name
+    head -n-1 "$project_path" > "$PROGDIR"/tmp
+    cat "$PROGDIR"/tmp > "$project_path" && echo deleted last session of "$project_name"
     rm "$PROGDIR"/tmp
-    echo deleted last session of "$project"
 
 
 # option p:  pause or resume session
@@ -174,10 +161,11 @@ elif [[ "$1" == "-p" ]]; then
     if [[ -f "$session" ]]; then
         close_sess
         echo "session  $project  paused"
+        # saves just the name of the project not the whole file path
         echo "-p $project" >> "$PROGDIR"/.last
         # send SIGSTOP signal (19) to stopwatch
         # pressing ctrl z on the terminal sends a SIGTSTP (20)
-        kill -19 $(cat "$PROGDIR"/child_process_id)
+        kill -19 "$(cat "$PROGDIR"/child_process_id)"
         # but don't overwrite the stopwatch file
         exit
 
@@ -198,6 +186,11 @@ elif [[ "$1" == "-p" ]]; then
         exit
     fi
 
+# -i option ->  show info about the amount of time recorded into project
+elif [[ "$1" = "-i" ]]; then
+    project="$2"
+    show_time
+    exit
 
 elif [[ "$1" = "-h" ||  "$1" = "--help"  || "$#" = 0 ]]; then
 
@@ -207,14 +200,9 @@ elif [[ "$1" = "-h" ||  "$1" = "--help"  || "$#" = 0 ]]; then
     echo -e "\n    ${BOLD}-s${RESET} PROJECT     Start session for PROJECT"
     echo -e "\n    ${BOLD}-p${RESET}             Pause/resume session"
     echo -e "\n    ${BOLD}-c${RESET}             Close background session for opened project"
+    echo -e "\n    ${BOLD}-d${RESET}             Delete last saved session"
     echo -e "\n    ${BOLD}-i PROJECT${RESET}     Display info about the time spent in PROJECT"
     echo -e "\n    ${BOLD}-h, --help${RESET}     Show this message"
     exit
 fi
 
-# -i option ->  show info about the amount of time recorded into project
-if [[ "$1" = "-i" ]]; then
-    project="$2"
-    show_time
-    exit
-fi
