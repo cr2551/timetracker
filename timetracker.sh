@@ -1,9 +1,13 @@
 #!/bin/bash
 
-
+# var to store program related things like a stopwatch file and whether or not a session is running
 PROGDIR=~/.TimeTracker
+# subpath to store the names of the actual projects and their time
+PROJECTSDIR=~/.TimeTracker/projects
 # create directory if it does not exist
 [[ ! -d  "$PROGDIR" ]] && mkdir "$PROGDIR";
+[[ ! -d  "$PROJECTSDIR" ]] && mkdir "$PROJECTSDIR";
+# find an open session if it exists, otherwise returns nothing
 session=$(find "$PROGDIR"/ -regex ".*session.*")
 
 
@@ -34,7 +38,7 @@ start_stopwatch() {
 }
 
 show_time() {
-    arr=($( cat "$PROGDIR"/"$project" ))
+    arr=($( cat "$PROJECTSDIR"/"$project" ))
     total=0
     for i in ${arr[@]}; do
         let total+=$i
@@ -56,7 +60,7 @@ close_sess() {
     rm "$PROGDIR"/session-*
 
     # append seconds to project file
-    echo $session_seconds >> "$PROGDIR"/"$project"
+    echo $session_seconds >> "$PROJECTSDIR"/"$project"
 
     # print time spent in the last session
     formatted_seconds=$(( $session_seconds % 60 ))
@@ -67,6 +71,8 @@ close_sess() {
 }
 
 start_sess() {
+    # put seconds since epoch in this file, when we close the session we will subtract the seconds at the time of closing from the value stored
+    # in this file
     date +%s >> "$PROGDIR"/session-"$project"
 
     echo "Started session for $project"
@@ -77,7 +83,7 @@ start_sess() {
 
 # function to kill stopwatch timer
 kill_watch() {
-    kill $(ps -e | grep "stopwatch.sh" | awk '{print $1}')
+    #kill $(ps -e | grep "stopwatch.sh" | awk '{print $1}')
     #overwrite the file with an empty string
     echo "" > "$PROGDIR/stopwatch"
 }
@@ -100,8 +106,8 @@ if [ "$1" == "-s" ]; then
         fi
         start_sess
         # redirecting the output to /dev/null is essential, even
-        #though the output was already going to the stopwatch file in PROGDIR
-        #nohup stopwatch.sh > "$PROGDIR"/stopwatch >&1 &
+        #though the output was already going to the stopwatch file in PROJECTSDIR
+        #nohup stopwatch.sh > "$PROJECTSDIR"/stopwatch >&1 &
         #stopwatch.sh > /dev/null >&1 &
         start_stopwatch > /dev/null >&1 &
         echo $! | tee $PROGDIR/child_process_id
@@ -121,7 +127,7 @@ elif [[ "$1" == "-c" ]]; then
 
     kill_watch
     #kill timetracker process that never stopped running
-    kill $(cat $PROGDIR/child_process_id)
+    kill "$(cat $PROGDIR/child_process_id)"
     #kill $(ps -e | grep "stopwatch.sh" | awk {'print $1'})
     session=$(find "$PROGDIR"/ -regex ".*session.*")
 # if there are more than 2 files that match the regex, then the next check will fail
@@ -152,13 +158,13 @@ elif [[ "$1" == "-r" ]]; then
         exit
     fi
 
-#delete last saved session
+#delete last saved session needs more work
 elif [[ "$1" == "-d" ]]; then
-    project=$PROGDIR/$2
-    head -n-1 $project > "$PROGDIR"/tmp
-    cat "$PROGDIR"/tmp > $project
+    project=$PROJECTSDIR/$2
+    head -n-1 "$project" > "$PROGDIR"/tmp
+    cat "$PROGDIR"/tmp > "$project"
     rm "$PROGDIR"/tmp
-    echo deleted last session of $project
+    echo deleted last session of "$project"
 
 
 # option p:  pause or resume session
@@ -184,7 +190,7 @@ elif [[ "$1" == "-p" ]]; then
             # pcregrep -o "(?<=-p)\s.*"
             start_sess && echo "Resumed Session for $project"
             # restart the process so the stopwach child process can start running again.
-            kill -CONT $(cat "$PROGDIR"/child_process_id)
+            kill -CONT "$(cat "$PROGDIR"/child_process_id)"
             show_time
         else
             echo "no session to resume"
