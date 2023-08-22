@@ -40,6 +40,8 @@ timetracker       [-s PROJECT | -p | -c | -i PROJECT | -h | --help ]
 
     -c             Close background session for opened project
 
+    -d             Delete last saved session
+
     -i PROJECT     Display info about the time spent in PROJECT
 
     -h, --help     Show this message
@@ -49,17 +51,45 @@ timetracker       [-s PROJECT | -p | -c | -i PROJECT | -h | --help ]
 
 This utility is meant to be integrated with a window manager for effortless time tracking. This eliminates the need to open a terminal to run the command.
 
-In i3, set keybindings to handle timetracker functionality and see the output of the command on a notification:
+In i3, set keybindings to handle timetracker functionality and see the output of the command on a notification.
+
+On your i3 config file:
 
 ```i3config
-# send a list of your projects to dmenu and lets you pick or create a new one.
-bindsym $mod+Shift+s exec notify-send "`timetracker -s $( ls ~/.TimeTracker | dmenu )`"
 
-bindsym $mod+Shift+d exec notify-send "`timetracker -c`"
+# send a list of your projects to dmenu to pick or create a new one.
+bindsym $mod+Shift+s exec notify-send "`timetracker.sh -s $( ls ~/.TimeTracker/projects | dmenu )`"
 
-bindsym $mod+Shift+p exec notify-send "`timetracker -p`"
+bindsym $mod+Shift+d exec notify-send "`timetracker.sh -c`"
+
+bindsym $mod+Shift+p exec notify-send "`timetracker.sh -p`"
 ```
 
-output of the first keybinding:
+output of the second keybinding:
 
 ![command notification](close_timetracker.png)
+
+## Stopwatch Feature
+
+TimeTracker has a built in stopwatch script that you can use to track your time.
+The preferred way is to configure a program like i3status to read a file that is being constantly updated with stopwach progress.
+i3status example:
+
+```i3status config
+general {
+        interval = 1
+}
+
+order += "read_file stopwatch"
+
+read_file stopwatch {
+    format = "%title:  %content "
+    format_bad = ""
+    path = "~/.TimeTracker/stopwatch"
+    color_good = "#f4f7f5"
+}
+```
+
+Remember to set the interval directive to 1 if you want to see the stopwatch being updated every second.
+
+
