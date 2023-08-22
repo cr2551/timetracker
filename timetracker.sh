@@ -169,19 +169,22 @@ elif [[ "$1" == "-p" ]]; then
         close_sess
         echo "session  $project  paused"
         echo "-p $project" >> "$PROGDIR"/.last
-        kill_watch
+        # send SIGSTOP signal (19) to stopwatch
+        # pressing ctrl z on the terminal sends a SIGTSTP (20)
+        kill -19 $(cat "$PROGDIR"/child_process_id)
+        # but don't overwrite the stopwatch file
         exit
+
     else
         LastLine=$(tail -n 1 "$PROGDIR"/.last)
-
         if [[ "$LastLine" =~ ^-p ]]; then
             # use awk to get all but the first field wich contains "-p"
-            project=$( echo "$LastLine" | awk 'BEGIN {ORS=" " } {for (i=2; i<=NF; i++) print $i}' )
+            project=$( echo "$LastLine" | awk '{for (i=2; i<=NF; i++) {printf "%s", $i; if(i<NF) printf " "}; printf ""}' )
             #or we could use pcregrep:
             # pcregrep -o "(?<=-p)\s.*"
             start_sess && echo "Resumed Session for $project"
-            # i need to start stopwatch
-            start_stopwatch
+            # restart the process so the stopwach child process can start running again.
+            kill -CONT $(cat "$PROGDIR"/child_process_id)
             show_time
         else
             echo "no session to resume"

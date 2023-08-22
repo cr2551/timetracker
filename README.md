@@ -24,7 +24,7 @@ timetracker.sh -c
 
 The output will contain the following information:
 
-![output](./timetracker_c.png)
+![output](./close_option.png)
 
 Use -h switch for help:
 
