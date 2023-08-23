@@ -92,4 +92,4 @@ read_file stopwatch {
 
 Remember to set the interval directive to 1 if you want to see the stopwatch being updated every second.
 
-
+![screen](demo.gif)

@@ -82,7 +82,6 @@ start_sess() {
 
 # function to kill stopwatch timer
 kill_watch() {
-    #kill $(ps -e | grep "stopwatch.sh" | awk '{print $1}')
     #overwrite the file with an empty string
     echo "" > "$PROGDIR/stopwatch"
 }
@@ -124,14 +123,13 @@ if [ "$1" == "-s" ]; then
 # this option does not need an argument passed to it. It will look for the file that has the word session in it.
 elif [[ "$1" == "-c" ]]; then
 
-    kill_watch
-    #kill timetracker process that never stopped running
-    kill "$(cat $PROGDIR/child_process_id)"
     #kill $(ps -e | grep "stopwatch.sh" | awk {'print $1'})
     session=$(find "$PROGDIR"/ -regex ".*session.*")
 # if there are more than 2 files that match the regex, then the next check will fail
     if [[ -f "$session" ]]; then
-        #kill_stopwatch
+        #kill timetracker process that never stopped running
+        kill "$(cat $PROGDIR/child_process_id)"
+        kill_watch
         close_sess
         echo "-c $project" >> "$PROGDIR"/.last
         echo "session  $project  closed"
@@ -146,7 +144,7 @@ elif [[ "$1" == "-c" ]]; then
 #delete last saved session needs more work
 elif [[ "$1" == "-d" ]]; then
     LastLine=$(tail -n 1 "$PROGDIR"/.last)
-            # use awk to get all but the first field 
+            # use awk to get all but the first field
     project_name=$( echo "$LastLine" | awk '{for (i=2; i<=NF; i++) {printf "%s", $i; if(i<NF) printf " "}; printf ""}' )
     project_path=$PROJECTSDIR/$project_name
     head -n-1 "$project_path" > "$PROGDIR"/tmp
